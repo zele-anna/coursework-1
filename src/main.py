@@ -14,6 +14,7 @@ def greeting():
     else:
         print("Добрый вечер")
 
+
 transaction_list = read_excel("../data/my_operations.xlsx")
 
 cards_info = get_sum_by_card(transaction_list)
