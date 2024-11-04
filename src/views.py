@@ -14,7 +14,3 @@ def main(date: str) -> str:
     ticker = ["AAPL", "AMZN", "GOOGL", "MSFT", "TSLA"]
     result["stock_prices"] = json.loads(get_stocks_rate(ticker))
     return json.dumps(result, indent=4, ensure_ascii=False)
-
-
-if __name__ == "__main__":
-    print(main("2024-11-04 19:03:01"))
