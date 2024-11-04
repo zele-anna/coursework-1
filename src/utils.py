@@ -6,11 +6,23 @@ import pandas as pd
 import requests
 from dotenv import load_dotenv
 
+import logging
+
+logging.basicConfig(
+    filename="logs/utils.log",
+    filemode="w",
+    format="%(asctime)s %(filename)s %(levelname)s: %(message)s",
+    level=logging.DEBUG,
+)
+
+utils_logger = logging.getLogger("utils")
+
 load_dotenv()
 
 
 def greeting(date: str) -> str:
     """"Функция возвращает приветствие в зависимости от текущего времени суток."""
+    utils_logger.info("Вывод приветствия.")
     date_obj = datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
     result = dict()
     if date_obj.hour <= 4:
@@ -28,8 +40,10 @@ def read_excel(path: str) -> list | None:
     """Чтение эксель-файла с данными о транзакциях, возвращает список словарей с данными о транзакциях."""
     try:
         df = pd.read_excel(path)
+        utils_logger.info("Успешное чтение файла.")
         return df.to_dict(orient="records")
     except FileNotFoundError:
+        utils_logger.error("Ошибка чтения файла!")
         return print("Файл не найден.")
 
 
@@ -38,6 +52,7 @@ def get_sum_by_card(transactions: list | None) -> str:
 - последние 4 цифры карты;
 - общая сумма расходов;
 - кешбэк (1 рубль на каждые 100 рублей)."""
+    utils_logger.info("Группировка транзакций по номерам карт.")
     df = pd.DataFrame(transactions)
     grouped_df = df.groupby("Номер карты").agg({"Сумма операции": "sum",
                                                 "Кэшбэк": "sum"})
@@ -55,6 +70,7 @@ def get_sum_by_card(transactions: list | None) -> str:
 def get_top_five(transactions: list | None) -> str:
     """Функция принимает на вход список словарей с данными о транзакциях
     и возвращает топ-5 операций по сумме платежа."""
+    utils_logger.info("Сортировка транзакций и вывод топ-5 транзакций по сумме операции.")
     df = pd.DataFrame(transactions)
     sorted_df = df.sort_values("Сумма операции", axis=0, ascending=False, kind='quicksort', na_position='last')
     top_five_dict = sorted_df.head().to_dict(orient="records")
@@ -72,10 +88,12 @@ def get_top_five(transactions: list | None) -> str:
 
 def get_exchange_rate(currency_list: list) -> str:
     """Получение курсов валют через API https://www.cbr-xml-daily.ru/."""
+    utils_logger.info("Запрос курсов валют.")
     url_cbr = "https://www.cbr-xml-daily.ru/latest.js"
     response = requests.get(url_cbr)
     if response.status_code == 200:
         result = response.json()
+        utils_logger.info("Успешное получение данных.")
         currency_rates = list()
         for item in currency_list:
             rates = dict()
@@ -83,12 +101,14 @@ def get_exchange_rate(currency_list: list) -> str:
             rates["rate"] = round(1/result["rates"][item], 2)
             currency_rates.append(rates)
     else:
+        utils_logger.error(f"Ошибка получения данных, код {response.status_code}.")
         raise Exception(f"Ошибка получения данных, код {response.status_code}")
     return json.dumps(currency_rates, indent=4, ensure_ascii=False)
 
 
 def get_stocks_rate(ticker: list) -> str:
     """Получение котировок акций через API https://marketstack.com/documentation."""
+    utils_logger.info("Запрос котировок акций.")
     access_key = os.getenv("ACCESS_KEY")
     base_url = "http://api.marketstack.com/v1/"
     url_marketstack = f"{base_url}eod?access_key={access_key}"
@@ -99,9 +119,11 @@ def get_stocks_rate(ticker: list) -> str:
         response = requests.get(url_marketstack, params=querystring)
         if response.status_code == 200:
             result = response.json()
+            utils_logger.info("Успешный запрос котировок акций.")
             stock_to_add["stock"] = stock
             stock_to_add["price"] = result["data"][0]["close"]
             stock_prices.append(stock_to_add)
         else:
+            utils_logger.error(f"Ошибка получения данных, код {response.status_code}.")
             raise Exception(f"Ошибка получения данных, код {response.status_code}")
     return json.dumps(stock_prices, indent=4, ensure_ascii=False)
