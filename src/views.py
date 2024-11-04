@@ -1,24 +1,20 @@
-from datetime import datetime
+import json
 
-def greeting(date):
-    """"Функция возвращает приветствие в зависимости от текущего времени суток."""
-    date_obj = datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
-    if date_obj.hour <= 4:
-        print("Доброй ночи")
-    elif date_obj.hour <= 11:
-        print("Доброе утро")
-    elif date_obj.hour <= 17:
-        print("Добрый день")
-    else:
-        print("Добрый вечер")
+from src.utils import get_exchange_rate, get_stocks_rate, get_sum_by_card, get_top_five, greeting, read_excel
 
 
-transaction_list = read_excel("../data/my_operations.xlsx")
-
-cards_info = get_sum_by_card(transaction_list)
+def main(date: str) -> str:
+    """Главная функция страницы Главная."""
+    result = json.loads(greeting(date))
+    transaction_list = read_excel("../data/my_operations.xlsx")
+    result["cards"] = json.loads(get_sum_by_card(transaction_list))
+    result["top_transactions"] = json.loads(get_top_five(transaction_list))
+    currencies_to_get_rates = ["USD", "EUR"]
+    result["currency_rates"] = json.loads(get_exchange_rate(currencies_to_get_rates))
+    ticker = ["AAPL", "AMZN", "GOOGL", "MSFT", "TSLA"]
+    result["stock_prices"] = json.loads(get_stocks_rate(ticker))
+    return json.dumps(result, indent=4, ensure_ascii=False)
 
 
 if __name__ == "__main__":
-    greeting("2024-12-03 04:03:01")
-    for key, value in cards_info.items():
-        print(f'По карте: {key} общая сумма операций {round(value["Сумма операции"], 2)}, кэшбэк: {value["Кэшбэк"]}')
+    print(main("2024-11-04 19:03:01"))
