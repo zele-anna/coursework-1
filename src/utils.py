@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from datetime import datetime
 
@@ -6,10 +7,8 @@ import pandas as pd
 import requests
 from dotenv import load_dotenv
 
-import logging
-
 logging.basicConfig(
-    filename="logs/utils.log",
+    filename="../logs/utils.log",
     filemode="w",
     format="%(asctime)s %(filename)s %(levelname)s: %(message)s",
     level=logging.DEBUG,
