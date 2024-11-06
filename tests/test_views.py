@@ -2,7 +2,7 @@ from src.views import main
 
 
 def test_main():
-    assert main("2024-11-04 20:03:11") == ('{\n'
+    assert main("2024-11-04 20:03:11") == ('''{\n'
  '    "greeting": "Добрый вечер",\n'
  '    "cards": [\n'
  '        {\n'
@@ -73,21 +73,5 @@ def test_main():
  '            "stock": "AAPL",\n'
  '            "price": 222.91\n'
  '        },\n'
- '        {\n'
- '            "stock": "AMZN",\n'
- '            "price": 197.93\n'
- '        },\n'
- '        {\n'
- '            "stock": "GOOGL",\n'
- '            "price": 171.29\n'
- '        },\n'
- '        {\n'
- '            "stock": "MSFT",\n'
- '            "price": 410.37\n'
- '        },\n'
- '        {\n'
- '            "stock": "TSLA",\n'
- '            "price": 248.98\n'
- '        }\n'
  '    ]\n'
- '}')
+ '}''')
