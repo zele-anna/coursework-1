@@ -19,11 +19,10 @@ def save_to_file(filename: Optional[str] = "category_report.csv") -> Callable:
     return decorator
 
 
-@save_to_file()
-def spending_by_category(transactions: pd.DataFrame, category: str, date: Optional[str | None] = None) -> pd.DataFrame:
+def spending_by_category(transactions: pd.DataFrame, category: str, date: Optional[str] = "today") -> pd.DataFrame:
     """Функция собирает данные о тратах в заданной категории за 3 последних месяца от переданной даты
     или от текущего дня, если дата не передана."""
-    if date is None:
+    if date == "today":
         end_day = datetime.today().replace(hour=23, minute=59, second=59)
     else:
         end_day = datetime.strptime(date, "%d.%m.%Y").replace(hour=23, minute=59, second=59)
