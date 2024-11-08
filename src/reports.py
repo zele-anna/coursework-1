@@ -14,7 +14,7 @@ def save_to_file(filename: Optional[str] = "category_report.csv") -> Callable:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> None:
             func_result = func(*args, **kwargs)
-            func_result.to_csv("../reports/" + filename)
+            func_result.to_csv("../reports/" + str(filename))
         return wrapper
     return decorator
 

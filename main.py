@@ -1,14 +1,13 @@
 import pandas as pd
 
-from src.views import main
+from src.views import main_page
 from src.services import simple_search
 from src.utils import read_excel
 from src.reports import spending_by_category
 
-
 date = "2024-11-08 18:45:00"
 
-main(date)
+main_page(date)
 
 transactions_list = read_excel("data/operations.xlsx")
 string_for_simple_search = "Пополнение"

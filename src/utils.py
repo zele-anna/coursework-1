@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 from datetime import datetime
@@ -7,8 +6,10 @@ import pandas as pd
 import requests
 from dotenv import load_dotenv
 
+PATH_TO_LOG = os.path.join(os.path.dirname(__file__), "../logs", "utils.log")
+
 logging.basicConfig(
-    filename="../logs/utils.log",
+    filename=PATH_TO_LOG,
     filemode="w",
     format="%(asctime)s %(filename)s %(levelname)s: %(message)s",
     level=logging.DEBUG,
@@ -23,16 +24,15 @@ def greeting(date: str) -> str:
     """"Функция возвращает приветствие в зависимости от текущего времени суток."""
     utils_logger.info("Вывод приветствия.")
     date_obj = datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
-    result = dict()
     if date_obj.hour <= 4:
-        result["greeting"] = "Доброй ночи"
+        result = "Доброй ночи"
     elif date_obj.hour <= 11:
-        result["greeting"] = "Доброе утро"
+        result = "Доброе утро"
     elif date_obj.hour <= 17:
-        result["greeting"] = "Добрый день"
+        result = "Добрый день"
     else:
-        result["greeting"] = "Добрый вечер"
-    return json.dumps(result, indent=4, ensure_ascii=False)
+        result = "Добрый вечер"
+    return result
 
 
 def read_excel(path: str) -> list | None:
@@ -46,7 +46,7 @@ def read_excel(path: str) -> list | None:
         return print("Файл не найден.")
 
 
-def get_sum_by_card(transactions: list | None) -> str:
+def get_sum_by_card(transactions: list | None) -> list:
     """Принимает на вход список транзакций и возвращает информацию о каждой карте:
 - последние 4 цифры карты;
 - общая сумма расходов;
@@ -63,10 +63,10 @@ def get_sum_by_card(transactions: list | None) -> str:
         item_to_add["total_spent"] = round(value["Сумма операции"], 2)
         item_to_add["cashback"] = value["Кэшбэк"]
         info.append(item_to_add)
-    return json.dumps(info, indent=4, ensure_ascii=False)
+    return info
 
 
-def get_top_five(transactions: list | None) -> str:
+def get_top_five(transactions: list | None) -> list:
     """Функция принимает на вход список словарей с данными о транзакциях
     и возвращает топ-5 операций по сумме платежа."""
     utils_logger.info("Сортировка транзакций и вывод топ-5 транзакций по сумме операции.")
@@ -82,10 +82,10 @@ def get_top_five(transactions: list | None) -> str:
         item_to_add["category"] = item["Категория"]
         item_to_add["description"] = item["Описание"]
         result.append(item_to_add)
-    return json.dumps(result, indent=4, ensure_ascii=False)
+    return result
 
 
-def get_exchange_rate(currency_list: list) -> str:
+def get_exchange_rate(currency_list: list) -> list:
     """Получение курсов валют через API https://www.cbr-xml-daily.ru/."""
     utils_logger.info("Запрос курсов валют.")
     url_cbr = "https://www.cbr-xml-daily.ru/latest.js"
@@ -102,27 +102,30 @@ def get_exchange_rate(currency_list: list) -> str:
     else:
         utils_logger.error(f"Ошибка получения данных, код {response.status_code}.")
         raise Exception(f"Ошибка получения данных, код {response.status_code}")
-    return json.dumps(currency_rates, indent=4, ensure_ascii=False)
+    return currency_rates
 
 
-def get_stocks_rate(ticker: list) -> str:
+def get_stocks_rate(ticker: list) -> list:
     """Получение котировок акций через API https://marketstack.com/documentation."""
+    stock_prices = list()
     utils_logger.info("Запрос котировок акций.")
     access_key = os.getenv("ACCESS_KEY")
     base_url = "http://api.marketstack.com/v1/"
-    url_marketstack = f"{base_url}eod?access_key={access_key}"
-    stock_prices = list()
+    url_marketstack = f"{base_url}eod/latest?access_key={access_key}"
+    ticker_str = ""
     for stock in ticker:
-        stock_to_add = dict()
-        querystring = {"symbols": stock}
-        response = requests.get(url_marketstack, params=querystring)
-        if response.status_code == 200:
-            result = response.json()
-            utils_logger.info("Успешный запрос котировок акций.")
-            stock_to_add["stock"] = stock
-            stock_to_add["price"] = result["data"][0]["close"]
+        ticker_str += f"{stock},"
+    querystring = {"symbols": ticker_str[:-1]}
+    response = requests.get(url_marketstack, params=querystring)
+    if response.status_code == 200:
+        utils_logger.info("Успешный запрос котировок акций.")
+        result = response.json()
+        for stock in result["data"]:
+            stock_to_add = dict()
+            stock_to_add["stock"] = stock["symbol"]
+            stock_to_add["price"] = stock["close"]
             stock_prices.append(stock_to_add)
-        else:
-            utils_logger.error(f"Ошибка получения данных, код {response.status_code}.")
-            raise Exception(f"Ошибка получения данных, код {response.status_code}")
-    return json.dumps(stock_prices, indent=4, ensure_ascii=False)
+    else:
+        utils_logger.error(f"Ошибка получения данных, код {response.status_code}.")
+        raise Exception(f"Ошибка получения данных, код {response.status_code}")
+    return stock_prices

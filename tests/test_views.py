@@ -1,77 +1,54 @@
-from src.views import main
+from unittest.mock import patch
+
+from src.views import main_page
 
 
-def test_main():
-    assert main("2024-11-04 20:03:11") == ('''{\n'
- '    "greeting": "Добрый вечер",\n'
- '    "cards": [\n'
- '        {\n'
- '            "last_digits": "4091",\n'
- '            "total_spent": 725.0,\n'
- '            "cashback": 0.0\n'
- '        },\n'
- '        {\n'
- '            "last_digits": "4529",\n'
- '            "total_spent": -115087.46,\n'
- '            "cashback": 0.0\n'
- '        },\n'
- '        {\n'
- '            "last_digits": "9905",\n'
- '            "total_spent": 33281.8,\n'
- '            "cashback": 0.0\n'
- '        },\n'
- '        {\n'
- '            "last_digits": "9916",\n'
- '            "total_spent": 68981.79,\n'
- '            "cashback": 1947.0\n'
- '        }\n'
- '    ],\n'
- '    "top_transactions": [\n'
- '        {\n'
- '            "date": "13.10.2024",\n'
- '            "amount": 301122.25,\n'
- '            "category": "Переводы",\n'
- '            "description": "Перевод между счетами"\n'
- '        },\n'
- '        {\n'
- '            "date": "28.10.2024",\n'
- '            "amount": 160000.0,\n'
- '            "category": "Переводы",\n'
- '            "description": "Перевод между счетами"\n'
- '        },\n'
- '        {\n'
- '            "date": "28.10.2024",\n'
- '            "amount": 150000.0,\n'
- '            "category": "Переводы",\n'
- '            "description": "Перевод между счетами"\n'
- '        },\n'
- '        {\n'
- '            "date": "01.10.2024",\n'
- '            "amount": 50000.0,\n'
- '            "category": "Переводы",\n'
- '            "description": "Перевод между счетами"\n'
- '        },\n'
- '        {\n'
- '            "date": "04.10.2024",\n'
- '            "amount": 50000.0,\n'
- '            "category": "Переводы",\n'
- '            "description": "Перевод между счетами"\n'
- '        }\n'
- '    ],\n'
- '    "currency_rates": [\n'
- '        {\n'
- '            "currency": "USD",\n'
- '            "rate": 97.55\n'
- '        },\n'
- '        {\n'
- '            "currency": "EUR",\n'
- '            "rate": 106.14\n'
- '        }\n'
- '    ],\n'
- '    "stock_prices": [\n'
- '        {\n'
- '            "stock": "AAPL",\n'
- '            "price": 222.91\n'
- '        },\n'
- '    ]\n'
- '}''')
+@patch("src.views.get_stocks_rate")
+@patch("src.views.get_exchange_rate")
+@patch("src.views.read_excel")
+def test_main_page(mocked_read, mocked_exchange, mocked_stocks, transaction_list_for_main) -> None:
+    """Тест на чтение файла csv."""
+    mocked_read.return_value = transaction_list_for_main
+    mocked_exchange.return_value = [{"currency": "USD", "rate": 97.83}, {"currency": "EUR", "rate": 105.45}]
+    mocked_stocks.return_value = [{"stock": "AAPL",
+                                  "price": 227.48},
+                                  {"stock": "AMZN",
+                                   "price": 210.05}]
+    assert main_page("2024-11-04 20:03:11") == '''{
+    "greeting": "Добрый вечер",
+    "cards": [
+        {
+            "last_digits": "",
+            "total_spent": -50000.0,
+            "cashback": ""
+        }
+    ],
+    "top_transactions": [
+        {
+            "date": "28.10.2024",
+            "amount": -50000.0,
+            "category": "Переводы",
+            "description": "Перевод между счетами"
+        }
+    ],
+    "currency_rates": [
+        {
+            "currency": "USD",
+            "rate": 97.83
+        },
+        {
+            "currency": "EUR",
+            "rate": 105.45
+        }
+    ],
+    "stock_prices": [
+        {
+            "stock": "AAPL",
+            "price": 227.48
+        },
+        {
+            "stock": "AMZN",
+            "price": 210.05
+        }
+    ]
+}'''

@@ -1,8 +1,11 @@
 import json
 import logging
+import os
+
+PATH_TO_LOG = os.path.join(os.path.dirname(__file__), "../logs", "services.log")
 
 logging.basicConfig(
-    filename="../logs/services.log",
+    filename=PATH_TO_LOG,
     filemode="w",
     format="%(asctime)s %(filename)s %(levelname)s: %(message)s",
     level=logging.DEBUG,
