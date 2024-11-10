@@ -1,49 +1,131 @@
+import logging
+import os
+from datetime import datetime
+
 import pandas as pd
+import requests
+from dotenv import load_dotenv
+
+PATH_TO_LOG = os.path.join(os.path.dirname(__file__), "../logs", "utils.log")
+
+logging.basicConfig(
+    filename=PATH_TO_LOG,
+    filemode="w",
+    format="%(asctime)s %(filename)s %(levelname)s: %(message)s",
+    level=logging.DEBUG,
+)
+
+utils_logger = logging.getLogger("utils")
+
+load_dotenv()
+
+
+def greeting(date: str) -> str:
+    """"Функция возвращает приветствие в зависимости от текущего времени суток."""
+    utils_logger.info("Вывод приветствия.")
+    date_obj = datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
+    if date_obj.hour <= 4:
+        result = "Доброй ночи"
+    elif date_obj.hour <= 11:
+        result = "Доброе утро"
+    elif date_obj.hour <= 17:
+        result = "Добрый день"
+    else:
+        result = "Добрый вечер"
+    return result
 
 
 def read_excel(path: str) -> list | None:
     """Чтение эксель-файла с данными о транзакциях, возвращает список словарей с данными о транзакциях."""
     try:
         df = pd.read_excel(path)
+        utils_logger.info("Успешное чтение файла.")
         return df.to_dict(orient="records")
     except FileNotFoundError:
+        utils_logger.error("Ошибка чтения файла!")
         return print("Файл не найден.")
 
 
-# def get_sum_by_card(transactions: list) -> dict:
-#     """Принимает на вход список транзакций и возвращает информацию о каждой карте:
-# - последние 4 цифры карты;
-# - общая сумма расходов;
-# - кешбэк (1 рубль на каждые 100 рублей)."""
-#     df = pd.DataFrame(transactions)
-#     grouped_df = df.groupby("Номер карты").agg({"Сумма операции": "sum"})
-#
-#     dict_data = grouped_df.to_dict(orient="index")
-#     print(dict_data)
-#     result = dict()
-#     sum_dict = dict()
-#     cashback_dict = dict()
-
-    # for key, value in dict_data.items():
-    #     print(key, value)
-    #     for keyword, val in value.items():
-    #         if key == "Сумма операции":
-    #             sum_dict[keyword] = {"Сумма операций": val}
-    #         elif key == "Кэшбэк":
-    #             cashback_dict[keyword] = {"Кэшбэк": val}
-
-
-def get_sum_by_card(transactions: list) -> dict:
+def get_sum_by_card(transactions: list | None) -> list:
     """Принимает на вход список транзакций и возвращает информацию о каждой карте:
 - последние 4 цифры карты;
 - общая сумма расходов;
 - кешбэк (1 рубль на каждые 100 рублей)."""
+    utils_logger.info("Группировка транзакций по номерам карт.")
     df = pd.DataFrame(transactions)
     grouped_df = df.groupby("Номер карты").agg({"Сумма операции": "sum",
                                                 "Кэшбэк": "sum"})
+    cards_dict = grouped_df.to_dict(orient="index")
+    info = list()
+    for key, value in cards_dict.items():
+        item_to_add = dict()
+        item_to_add["last_digits"] = str(key)[-4:]
+        item_to_add["total_spent"] = round(value["Сумма операции"], 2)
+        item_to_add["cashback"] = value["Кэшбэк"]
+        info.append(item_to_add)
+    return info
 
-    return grouped_df.to_dict(orient="index")
+
+def get_top_five(transactions: list | None) -> list:
+    """Функция принимает на вход список словарей с данными о транзакциях
+    и возвращает топ-5 операций по сумме платежа."""
+    utils_logger.info("Сортировка транзакций и вывод топ-5 транзакций по сумме операции.")
+    df = pd.DataFrame(transactions)
+    sorted_df = df.sort_values("Сумма операции", axis=0, ascending=False, kind='quicksort', na_position='last')
+    top_five_dict = sorted_df.head().to_dict(orient="records")
+    result = list()
+    for item in top_five_dict:
+        item_to_add = dict()
+        date = datetime.strptime(item["Дата операции"], "%d.%m.%Y %H:%M:%S")
+        item_to_add["date"] = date.strftime("%d.%m.%Y")
+        item_to_add["amount"] = item["Сумма операции"]
+        item_to_add["category"] = item["Категория"]
+        item_to_add["description"] = item["Описание"]
+        result.append(item_to_add)
+    return result
 
 
-transaction_list = read_excel("../data/my_operations.xlsx")
-print(get_sum_by_card(transaction_list))
+def get_exchange_rate(currency_list: list) -> list:
+    """Получение курсов валют через API https://www.cbr-xml-daily.ru/."""
+    utils_logger.info("Запрос курсов валют.")
+    url_cbr = "https://www.cbr-xml-daily.ru/latest.js"
+    response = requests.get(url_cbr)
+    if response.status_code == 200:
+        result = response.json()
+        utils_logger.info("Успешное получение данных.")
+        currency_rates = list()
+        for item in currency_list:
+            rates = dict()
+            rates["currency"] = item
+            rates["rate"] = round(1/result["rates"][item], 2)
+            currency_rates.append(rates)
+    else:
+        utils_logger.error(f"Ошибка получения данных, код {response.status_code}.")
+        raise Exception(f"Ошибка получения данных, код {response.status_code}")
+    return currency_rates
+
+
+def get_stocks_rate(ticker: list) -> list:
+    """Получение котировок акций через API https://marketstack.com/documentation."""
+    stock_prices = list()
+    utils_logger.info("Запрос котировок акций.")
+    access_key = os.getenv("ACCESS_KEY")
+    base_url = "http://api.marketstack.com/v1/"
+    url_marketstack = f"{base_url}eod/latest?access_key={access_key}"
+    ticker_str = ""
+    for stock in ticker:
+        ticker_str += f"{stock},"
+    querystring = {"symbols": ticker_str[:-1]}
+    response = requests.get(url_marketstack, params=querystring)
+    if response.status_code == 200:
+        utils_logger.info("Успешный запрос котировок акций.")
+        result = response.json()
+        for stock in result["data"]:
+            stock_to_add = dict()
+            stock_to_add["stock"] = stock["symbol"]
+            stock_to_add["price"] = stock["close"]
+            stock_prices.append(stock_to_add)
+    else:
+        utils_logger.error(f"Ошибка получения данных, код {response.status_code}.")
+        raise Exception(f"Ошибка получения данных, код {response.status_code}")
+    return stock_prices
